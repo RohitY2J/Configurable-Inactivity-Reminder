@@ -10,9 +10,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -24,9 +27,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.FilledIconButton
+import androidx.wear.compose.material3.IconButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
-import androidx.wear.compose.material3.Stepper
 import androidx.wear.compose.material3.Text
 import com.example.inactivityreminder.data.SettingsRepository
 import com.example.inactivityreminder.presentation.theme.InActivityReminderTheme
@@ -143,63 +148,74 @@ fun HomeScreen() {
         initial = SettingsRepository.DEFAULT_INTERVAL_MINUTES
     )
 
-    // ScreenScaffold handles Wear-specific layout concerns (round screen padding, time text area)
     ScreenScaffold {
         Column(
-            modifier = Modifier.fillMaxSize().padding(8.dp),
+            modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Status text showing whether monitoring is active
+            // Status text
             Text(
                 text = if (isMonitoring) "Monitoring Active" else "Monitoring Off",
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center
             )
 
-            // Start/Stop button — toggles the foreground service
+            // Start/Stop button — compact
             Button(
                 onClick = {
                     scope.launch {
                         if (isMonitoring) {
-                            // User wants to stop: persist state, then stop the service
                             repo.setMonitoringEnabled(false)
                             context.stopService(
                                 Intent(context, InactivityForegroundService::class.java)
                             )
                         } else {
-                            // User wants to start: persist state, then start the foreground service
                             repo.setMonitoringEnabled(true)
-                            // startForegroundService() is required for foreground services on API 26+
                             context.startForegroundService(
                                 Intent(context, InactivityForegroundService::class.java)
                             )
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                modifier = Modifier.height(32.dp).padding(top = 4.dp)
             ) {
-                Text(if (isMonitoring) "Stop" else "Start")
+                Text(
+                    text = if (isMonitoring) "Stop" else "Start",
+                    style = MaterialTheme.typography.labelSmall
+                )
             }
 
-            // Stepper — Wear OS-specific component for incrementing/decrementing a value.
-            // Shows +/- buttons with the current value in the center.
-            // Range: 1 to 60 minutes in 1-minute increments (for testing; production would use 5-min steps).
-            Stepper(
-                value = interval,
-                onValueChange = { newVal: Int ->
-                    // Persist the new interval immediately — service reads it on next check cycle
-                    scope.launch { repo.setInactivityInterval(newVal) }
-                },
-                valueProgression = 1..60 step 1,
-                decreaseIcon = { Text("-") },
-                increaseIcon = { Text("+") }
+            // Compact interval selector: [ - ]  30 min  [ + ]
+            Row(
+                modifier = Modifier.padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Content displayed in the center of the Stepper
+                FilledIconButton(
+                    onClick = {
+                        scope.launch { repo.setInactivityInterval(interval - 1) }
+                    },
+                    modifier = Modifier.size(28.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors()
+                ) {
+                    Text("-", style = MaterialTheme.typography.labelLarge)
+                }
+
                 Text(
                     text = "${interval} min",
-                    style = MaterialTheme.typography.titleSmall
+                    style = MaterialTheme.typography.bodyMedium
                 )
+
+                FilledIconButton(
+                    onClick = {
+                        scope.launch { repo.setInactivityInterval(interval + 1) }
+                    },
+                    modifier = Modifier.size(28.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors()
+                ) {
+                    Text("+", style = MaterialTheme.typography.labelLarge)
+                }
             }
         }
     }
