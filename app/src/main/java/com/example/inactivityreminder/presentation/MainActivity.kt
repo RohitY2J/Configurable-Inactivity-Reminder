@@ -197,6 +197,7 @@ fun HomeScreen() {
                         scope.launch { repo.setInactivityInterval(interval - 1) }
                     },
                     modifier = Modifier.size(28.dp),
+                    enabled = !isMonitoring,
                     colors = IconButtonDefaults.filledIconButtonColors()
                 ) {
                     Text("-", style = MaterialTheme.typography.labelLarge)
@@ -212,6 +213,7 @@ fun HomeScreen() {
                         scope.launch { repo.setInactivityInterval(interval + 1) }
                     },
                     modifier = Modifier.size(28.dp),
+                    enabled = !isMonitoring,
                     colors = IconButtonDefaults.filledIconButtonColors()
                 ) {
                     Text("+", style = MaterialTheme.typography.labelLarge)
