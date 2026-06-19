@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -39,6 +40,12 @@ class SettingsRepository(private val context: Context) {
         /** DataStore key for whether monitoring is currently enabled (service running). */
         private val KEY_MONITORING = booleanPreferencesKey("is_monitoring_enabled")
 
+        /** DataStore key for elapsed inactive seconds (updated by service for UI display). */
+        private val KEY_INACTIVE_SECONDS = longPreferencesKey("inactive_seconds")
+
+        /** DataStore key for whether user is currently active (updated by service). */
+        private val KEY_IS_ACTIVE = booleanPreferencesKey("is_currently_active")
+
         /** Default interval used when the user hasn't configured one yet. */
         const val DEFAULT_INTERVAL_MINUTES = 30
     }
@@ -63,6 +70,22 @@ class SettingsRepository(private val context: Context) {
     }
 
     /**
+     * Emits how many seconds the user has been inactive.
+     * Updated by the service every check cycle for the UI to display.
+     */
+    val inactiveSeconds: Flow<Long> = context.dataStore.data.map { prefs ->
+        prefs[KEY_INACTIVE_SECONDS] ?: 0L
+    }
+
+    /**
+     * Emits whether the user is currently active (moving).
+     * Updated by the service for the UI to display.
+     */
+    val isCurrentlyActive: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_IS_ACTIVE] ?: true
+    }
+
+    /**
      * Persists a new inactivity interval.
      * Clamped to 1–60 minutes (1 min allowed for testing; production would use 10–60).
      * This is a suspend function because DataStore writes are asynchronous.
@@ -78,5 +101,16 @@ class SettingsRepository(private val context: Context) {
      */
     suspend fun setMonitoringEnabled(enabled: Boolean) {
         context.dataStore.edit { it[KEY_MONITORING] = enabled }
+    }
+
+    /**
+     * Called by the service to update the UI-visible inactivity status.
+     * Only writes when values actually change to reduce disk I/O.
+     */
+    suspend fun updateActivityStatus(inactiveSec: Long, isActive: Boolean) {
+        context.dataStore.edit {
+            it[KEY_INACTIVE_SECONDS] = inactiveSec
+            it[KEY_IS_ACTIVE] = isActive
+        }
     }
 }

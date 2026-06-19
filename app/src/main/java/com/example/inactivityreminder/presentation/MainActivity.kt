@@ -176,6 +176,10 @@ fun HomeScreen() {
         initial = SettingsRepository.DEFAULT_INTERVAL_MINUTES
     )
 
+    // Observe activity status from service (updated every 15s — battery efficient)
+    val inactiveSec by repo.inactiveSeconds.collectAsState(initial = 0L)
+    val isActive by repo.isCurrentlyActive.collectAsState(initial = true)
+
     ScreenScaffold {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -246,6 +250,23 @@ fun HomeScreen() {
                 ) {
                     Text("+", style = MaterialTheme.typography.labelLarge)
                 }
+            }
+
+            // Elapsed time / active status (only shown when monitoring)
+            if (isMonitoring) {
+                val statusText = if (isActive) {
+                    "Currently active"
+                } else {
+                    val min = inactiveSec / 60
+                    val sec = inactiveSec % 60
+                    "Inactive: ${min}m ${sec}s"
+                }
+                Text(
+                    text = statusText,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
             }
         }
     }

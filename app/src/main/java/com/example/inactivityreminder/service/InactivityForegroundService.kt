@@ -122,6 +122,9 @@ class InactivityForegroundService : Service() {
 
                 Log.d(TAG, "CHECK: active=$isActive | inactive=${elapsed / 1000}s / ${thresholdMs / 1000}s | onBody=${motionDetector.isOnBody}")
 
+                // Update DataStore so the UI can display elapsed time (low frequency = battery friendly)
+                settingsRepository.updateActivityStatus(elapsed / 1000, isActive)
+
                 if (elapsed >= thresholdMs) {
                     Log.w(TAG, "🔔 FIRING REMINDER — inactive ${elapsed / 1000}s >= threshold ${thresholdMs / 1000}s")
                     notifier.fireReminderNotification()
