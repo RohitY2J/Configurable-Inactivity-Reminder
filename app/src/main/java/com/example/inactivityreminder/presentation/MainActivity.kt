@@ -1,6 +1,8 @@
 package com.example.inactivityreminder.presentation
 
 import android.Manifest
+import android.app.ActivityManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -76,15 +78,41 @@ class MainActivity : ComponentActivity() {
         android.util.Log.d(TAG, "onCreate — requesting permissions")
         requestNeededPermissions()
 
+        // Sync DataStore state with actual service state on launch.
+        // If the service isn't running (e.g. after reinstall/reboot), reset the flag to false.
+        syncMonitoringState()
+
         // Set up the Compose UI hierarchy
         setContent {
             InActivityReminderTheme {
-                // AppScaffold provides the top-level structure for Wear Compose Material3
                 AppScaffold {
                     HomeScreen()
                 }
             }
         }
+    }
+
+    /**
+     * Checks if the foreground service is actually running.
+     * If DataStore says monitoring=true but service isn't running, resets to false.
+     * This handles cases like reinstall, force stop, or process death.
+     */
+    private fun syncMonitoringState() {
+        val repo = SettingsRepository(this)
+        val serviceRunning = isServiceRunning(InactivityForegroundService::class.java)
+        if (!serviceRunning) {
+            kotlinx.coroutines.MainScope().launch {
+                repo.setMonitoringEnabled(false)
+            }
+            android.util.Log.d(TAG, "Service not running — reset monitoring state to false")
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun isServiceRunning(serviceClass: Class<*>): Boolean {
+        val manager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        return manager.getRunningServices(Int.MAX_VALUE)
+            .any { it.service.className == serviceClass.name }
     }
 
     /**
